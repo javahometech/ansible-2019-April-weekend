@@ -1,6 +1,8 @@
 ---
-- hosts: 172.31.26.174
+- hosts: webservers 
   become: True
+  vars:
+    - http_port: 80
   tasks:
     - name: Install packages
       yum:
@@ -9,23 +11,34 @@
       loop:
         - { name: 'httpd', state: 'present' }
         - { name: 'git', state: 'present' }
+      tags:
+        - install
+      when: 
+        - ansible_os_family=="RedHat"
+        - ansible_architecture=="x86_64"
     - name: Start Apache server
       service:
         name: httpd
         state: started
         enabled: True
+      tags:
+        - start
     - name: Deploy static website from Git
       git:
         repo: https://github.com/javahometech/javahome-app
         dest: /var/www/html/
+      tags:
+        - deploy
+       
     - name: Change port number
       lineinfile:
         path: /etc/httpd/conf/httpd.conf
         regexp: '^Listen ' 
-        line: 'Listen 80'
+        line: "Listen {{http_port}}"
       notify:
         - Restart Apache
-
+      tags:
+        - port
   handlers:
     - name: Restart Apache
       service:
