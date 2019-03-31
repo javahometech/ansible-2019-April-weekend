@@ -1,0 +1,35 @@
+---
+- hosts: 172.31.26.174
+  become: True
+  tasks:
+    - name: Install packages
+      yum:
+        name: "{{item.name}}"
+        state: "{{item.state}}"
+      loop:
+        - { name: 'httpd', state: 'present' }
+        - { name: 'git', state: 'present' }
+    - name: Start Apache server
+      service:
+        name: httpd
+        state: started
+        enabled: True
+    - name: Deploy static website from Git
+      git:
+        repo: https://github.com/javahometech/javahome-app
+        dest: /var/www/html/
+    - name: Change port number
+      lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^Listen ' 
+        line: 'Listen 80'
+      notify:
+        - Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: httpd
+        state: restarted
+
+...
